@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pixelated Circle Generator</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: "Segoe UI", sans-serif;
+      background: #1e1e2f;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    h1 {
+      margin-bottom: 15px;
+    }
+
+    #controls {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background: #2b2b3c;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    input[type="range"] {
+      width: 200px;
+    }
+
+    canvas {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.4);
+    }
+
+    button {
+      background: #4f8ef7;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 15px;
+      transition: 0.2s;
+    }
+    button:hover {
+      background: #366ad1;
+    }
+  </style>
+</head>
+<body>
+  <h1>Pixelated Circle Generator</h1>
+  <div id="controls">
+    <label>
+      Radius: <input id="radius" type="range" min="10" max="200" value="80">
+      <span id="radiusValue">80</span>
+    </label>
+    <label>
+      Thickness: <input id="thickness" type="range" min="1" max="40" value="5">
+      <span id="thicknessValue">5</span>
+    </label>
+    <label>
+      <input id="filled" type="checkbox" checked>
+      Filled
+    </label>
+    <button id="saveBtn">Save as PNG</button>
+  </div>
+  <canvas id="canvas" width="500" height="500"></canvas>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    const radiusInput = document.getElementById("radius");
+    const thicknessInput = document.getElementById("thickness");
+    const filledInput = document.getElementById("filled");
+
+    const radiusValue = document.getElementById("radiusValue");
+    const thicknessValue = document.getElementById("thicknessValue");
+
+    const saveBtn = document.getElementById("saveBtn");
+
+    function drawCircle() {
+      const radius = parseInt(radiusInput.value);
+      const thickness = parseInt(thicknessInput.value);
+      const filled = filledInput.checked;
+
+      radiusValue.textContent = radius;
+      thicknessValue.textContent = thickness;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+
+      const pixelSize = 4; // blocky pixel size
+
+      for (let y = -radius; y <= radius; y += pixelSize) {
+        for (let x = -radius; x <= radius; x += pixelSize) {
+          const dist = Math.sqrt(x * x + y * y);
+
+          if (filled) {
+            if (dist <= radius) {
+              drawPixel(cx + x, cy + y, pixelSize);
+            }
+          } else {
+            if (dist >= radius - thickness && dist <= radius) {
+              drawPixel(cx + x, cy + y, pixelSize);
+            }
+          }
+        }
+      }
+    }
+
+    function drawPixel(x, y, size) {
+      ctx.fillStyle = "black";
+      ctx.fillRect(x, y, size, size);
+    }
+
+    // Save canvas as PNG
+    saveBtn.addEventListener("click", () => {
+      const link = document.createElement("a");
+      link.download = "circle.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    });
+
+    // Event listeners
+    radiusInput.addEventListener("input", drawCircle);
+    thicknessInput.addEventListener("input", drawCircle);
+    filledInput.addEventListener("change", drawCircle);
+
+    // Initial draw
+    drawCircle();
+  </script>
+</body>
+</html>
