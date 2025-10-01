@@ -31,14 +31,24 @@
       margin-bottom: 20px;
     }
 
-    label {
+    .control-group {
       display: flex;
-      justify-content: space-between;
       align-items: center;
+      justify-content: space-between;
+      gap: 8px;
     }
 
     input[type="range"] {
-      width: 200px;
+      flex: 1;
+    }
+
+    input[type="number"] {
+      width: 60px;
+      padding: 3px;
+      border-radius: 6px;
+      border: none;
+      text-align: center;
+      font-size: 14px;
     }
 
     canvas {
@@ -65,21 +75,28 @@
 <body>
   <h1>Pixelated Circle Generator</h1>
   <div id="controls">
-    <label>
-      Radius: <input id="radius" type="range" min="10" max="200" value="80">
-      <span id="radiusValue">80</span>
-    </label>
-    <label>
-      Thickness: <input id="thickness" type="range" min="1" max="40" value="5">
-      <span id="thicknessValue">5</span>
-    </label>
+    <div class="control-group">
+      <label for="radius">Radius:</label>
+      <input id="radius" type="range" min="5" max="100" value="20">
+      <input id="radiusNum" type="number" min="5" max="100" value="20">
+    </div>
+    <div class="control-group">
+      <label for="thickness">Thickness:</label>
+      <input id="thickness" type="range" min="1" max="20" value="3">
+      <input id="thicknessNum" type="number" min="1" max="20" value="3">
+    </div>
+    <div class="control-group">
+      <label for="pixelSize">Pixel Size (Zoom):</label>
+      <input id="pixelSize" type="range" min="2" max="20" value="8">
+      <input id="pixelSizeNum" type="number" min="2" max="20" value="8">
+    </div>
     <label>
       <input id="filled" type="checkbox" checked>
       Filled
     </label>
     <button id="saveBtn">Save as PNG</button>
   </div>
-  <canvas id="canvas" width="500" height="500"></canvas>
+  <canvas id="canvas" width="600" height="600"></canvas>
 
   <script>
     const canvas = document.getElementById("canvas");
@@ -87,42 +104,85 @@
 
     const radiusInput = document.getElementById("radius");
     const thicknessInput = document.getElementById("thickness");
+    const pixelSizeInput = document.getElementById("pixelSize");
+
+    const radiusNum = document.getElementById("radiusNum");
+    const thicknessNum = document.getElementById("thicknessNum");
+    const pixelSizeNum = document.getElementById("pixelSizeNum");
+
     const filledInput = document.getElementById("filled");
-
-    const radiusValue = document.getElementById("radiusValue");
-    const thicknessValue = document.getElementById("thicknessValue");
-
     const saveBtn = document.getElementById("saveBtn");
+
+    function drawGrid(pixelSize) {
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+
+      ctx.strokeStyle = "#ddd";
+      ctx.lineWidth = 1;
+
+      // Vertical grid lines
+      for (let x = cx % pixelSize; x <= canvas.width; x += pixelSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+      }
+
+      // Horizontal grid lines
+      for (let y = cy % pixelSize; y <= canvas.height; y += pixelSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+
+      // Red center axes
+      ctx.strokeStyle = "red";
+      ctx.lineWidth = 2;
+
+      ctx.beginPath();
+      ctx.moveTo(cx, 0);
+      ctx.lineTo(cx, canvas.height);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(0, cy);
+      ctx.lineTo(canvas.width, cy);
+      ctx.stroke();
+    }
 
     function drawCircle() {
       const radius = parseInt(radiusInput.value);
       const thickness = parseInt(thicknessInput.value);
       const filled = filledInput.checked;
-
-      radiusValue.textContent = radius;
-      thicknessValue.textContent = thickness;
+      const pixelSize = parseInt(pixelSizeInput.value);
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+
       const cx = canvas.width / 2;
       const cy = canvas.height / 2;
 
-      const pixelSize = 4; // blocky pixel size
+      const rOuterSq = radius * radius;
+      const rInnerSq = (radius - thickness) * (radius - thickness);
 
-      for (let y = -radius; y <= radius; y += pixelSize) {
-        for (let x = -radius; x <= radius; x += pixelSize) {
-          const dist = Math.sqrt(x * x + y * y);
+      for (let y = -radius; y <= radius; y++) {
+        for (let x = -radius; x <= radius; x++) {
+          const distSq = x * x + y * y;
 
           if (filled) {
-            if (dist <= radius) {
-              drawPixel(cx + x, cy + y, pixelSize);
+            if (distSq <= rOuterSq) {
+              drawPixel(cx + x * pixelSize, cy + y * pixelSize, pixelSize);
             }
           } else {
-            if (dist >= radius - thickness && dist <= radius) {
-              drawPixel(cx + x, cy + y, pixelSize);
+            if (distSq <= rOuterSq && distSq >= rInnerSq) {
+              drawPixel(cx + x * pixelSize, cy + y * pixelSize, pixelSize);
             }
           }
         }
       }
+
+      // Grid overlays circle
+      drawGrid(pixelSize);
     }
 
     function drawPixel(x, y, size) {
@@ -130,18 +190,30 @@
       ctx.fillRect(x, y, size, size);
     }
 
-    // Save canvas as PNG
+    // Sync sliders <-> number boxes
+    function bindSliderAndNumber(slider, number) {
+      slider.addEventListener("input", () => {
+        number.value = slider.value;
+        drawCircle();
+      });
+      number.addEventListener("input", () => {
+        slider.value = number.value;
+        drawCircle();
+      });
+    }
+
+    bindSliderAndNumber(radiusInput, radiusNum);
+    bindSliderAndNumber(thicknessInput, thicknessNum);
+    bindSliderAndNumber(pixelSizeInput, pixelSizeNum);
+
+    filledInput.addEventListener("change", drawCircle);
+
     saveBtn.addEventListener("click", () => {
       const link = document.createElement("a");
       link.download = "circle.png";
       link.href = canvas.toDataURL("image/png");
       link.click();
     });
-
-    // Event listeners
-    radiusInput.addEventListener("input", drawCircle);
-    thicknessInput.addEventListener("input", drawCircle);
-    filledInput.addEventListener("change", drawCircle);
 
     // Initial draw
     drawCircle();
